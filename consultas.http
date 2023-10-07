@@ -2,44 +2,42 @@
 GET http://localhost:192/usuarios/
 
 ### Ejercicio 2
-GET http://localhost:192/usuarios/7
+GET http://localhost:192/usuarios/2
 
 ### Ejercicio 3
 POST http://localhost:192/usuarios
 Content-Type: application/json
 
- {
-    "id": 11,
-    "nombre": "Marcos Acosta",
-    "edad": 45,
-    "email": "marcosacosta@hotmail.com",
-    "telefono": "+54 11-448-0638"
+  {
+    "nombre_usuario": "Marcos Acosta",
+    "contrasenia_usuario":"contrasenia5"
   }
 
 ### Ejercicio 4
   PATCH http://localhost:192/usuarios/1
   Content-Type: application/json
 
-  {
-    "nombre": "Marcos sastre",
-    "telefono": "+54 11-325-9836"
+  { 
+    "nombre_usuario": "usuarioMOD",
+    "contrasenia_usuario": "contraseniaMOD" //hasta 16 caracteres lo cambiare a 25 max, proximamente
   }
 
 ### Ejercicio 5
-DELETE http://localhost:192/usuarios/1
+DELETE http://localhost:192/usuarios/1 
+// Da error porque intenta borrar una tupla que se esta usando en otra tabla, pero funciona
 
 ### Ejercicio 6
-GET http://localhost:192/productos/precio/1
+GET http://localhost:192/existencias/precio/1 
 
 ### Ejercicio 7
 GET http://localhost:192/productos/nombre/1
 
 ### Ejercicio 8
-GET http://localhost:192/usuarios/telefono/4
+GET http://localhost:192/clientes/telefono/4
 
 ### Ejercicio 9
-GET http://localhost:192/usuarios/nombre/4
+GET http://localhost:192/clientes/nombre/4
 
 ### Ejercicio 10
-GET http://localhost:192/productos/totalstock
+GET http://localhost:192/existencias/totalstock
 

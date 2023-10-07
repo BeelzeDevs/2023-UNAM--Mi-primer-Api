@@ -1,12 +1,20 @@
 import { createRequire } from 'node:module'
 import  express  from 'express'
 
+import DB from './BD/conection.js'
+//import productos from './models/producto.js'
+import Usuario from './models/usuario.js'
+import Producto from './models/producto.js'
+import Existencia from './models/existencia.js'
+import Cliente from './models/cliente.js'
+
 const require = createRequire(import.meta.url)
-const datos = require('./datos.json')
+//const datos = require('./datos.json')
 
 const app = express()
 const expossedPort = 192
 
+  
 app.get('/', (req,res) => {
 
 	res.status(200).send('<h1>Bienvenido a mi primer API</h1><p>los comandos son los siguientes:</p>')
@@ -14,22 +22,22 @@ app.get('/', (req,res) => {
 })
 
 /* 1- Crear el endpoint ‘/usuarios/’, que devuelva el listado completo de usuarios.*/
-app.get('/usuarios/', (req,res) => {
+app.get('/usuarios/', async (req,res) => {
 	try{
-		let allUsers = datos.usuarios
+		let allUsers = await Usuario.findAll() // select * from usuarios
 		res.status(200).json(allUsers)
 	}catch(error){
-		res.status(2004).json({'message': error})
+		res.status(204).json({'message': error})
 	}
 	
 })
 /* 2- Crear el endpoint ‘/usuarios/id’ que devuelva los datos de un usuario en particular consignado por
 su número de id */
-app.get('/usuarios/:id', (req, res) =>{
+app.get('/usuarios/:id', async (req, res) =>{
 
 	try{
 		let UserID = parseInt(req.params.id)
-		let UserFound = datos.usuarios.find((Usuario) => Usuario.id === UserID)
+		let UserFound = await Usuario.findByPk(UserID)
 
 		res.status(200).json(UserFound)
 	}catch(error){
@@ -46,12 +54,14 @@ app.post('/usuarios', (req,res)=>{
 			bodyTemp += chunk.toString()
 		})
 		
-		req.on('end', () => {
+		req.on('end', async () => {
 			const userData = JSON.parse(bodyTemp)
 			req.body = userData
-			datos.usuarios.push(req.body)
+			const userToSave = new Usuario(req.body)
+			await userToSave.save()
+			
+			res.status(201).json({'meesage': 'User added succesfully'})
 		})
-		res.status(201).json({'meesage': 'User added succesfully'})
 
 	}catch(error){
 		res.status(204).json({'message': error})
@@ -59,68 +69,64 @@ app.post('/usuarios', (req,res)=>{
 })
 
 /* 4- Crear el endpoint ‘/usuarios/id’ que permita modificar algún atributo de un usuario. */
-app.patch('/usuarios/:id', (req,res) => {
+app.patch('/usuarios/:id', async (req,res) => {
 	let idUserEdit = parseInt(req.params.id)
-	let userToEdit = datos.usuarios.find( (user) => user.id === idUserEdit)
+	try{
+		let userToEdit = await Usuario.findByPk(idUserEdit)
+		if(!userToEdit){
+			res.status(204).json({'message':'User not found'})
+		}
 
-	if(!userToEdit){
+		let bodyTemp = ''
+
+		req.on('data',(chunk)=>{
+			bodyTemp += chunk.toString()
+		})
+
+		req.on('end', async ()=>{
+			const userData = JSON.parse(bodyTemp)
+			req.body = userData
+
+			await userToEdit.update(req.body)
+
+			res.status(200).json({'message': 'User Updated'})
+
+		})
+
+
+
+	}catch(error){
 		res.status(204).json({'message': 'User not found'})
 	}
-	let bodyTemp = ''
-
-	req.on('data',(chunk)=>{
-		bodyTemp += chunk.toString()
-	})
-	req.on('end', ()=>{
-		const userData = JSON.parse(bodyTemp)
-		req.body = userData
-
-		if(userData.nombre){
-			userToEdit.nombre = userData.nombre
-		}
-		if(userData.edad){
-			userToEdit.edad = userData.edad
-		}
-		if(userData.email){
-			userToEdit.email = userData.email
-		}
-		if(userData.telefono){
-			userToEdit.telefono = userData.telefono
-		}
-
-		res.status(200).json({'message': 'User Updated'})
-
-	})
+	
 
 })
 
 /* 5 - Crear el endpoint ‘/usuarios/id’ que permita borrar un usuario de los datos*/
-app.delete('/usuarios/:id', (req,res) => {
+app.delete('/usuarios/:id', async (req,res) => {
 	let userID = parseInt(req.params.id)
-	let userToDelete = datos.usuarios.find((user) => user.id === userID)
-
-	if(!userToDelete){
-		res.status(204).json({'message': 'User not found'})
-	}
-
-	let userToDeleteINDEX = datos.usuarios.indexOf(userToDelete)
-	try{
-		datos.usuarios.splice(userToDeleteINDEX,1)
+	try {
+		let userToDelete = await Usuario.findByPk(userID)
+		if(!userToDelete){
+			res.status(204).json({'message': 'User not found'})
+		}
+		await userToDelete.destroy()
 		res.status(200).json({'message': 'User deleted succesfully'})
-	}
-	catch(error){
+
+	} catch (error) {
 		res.status(204).json({'message': error})
 	}
+	
 })
 /* 6- Crear el endpoint que permita obtener el precio de un producto que se indica por id. */
-app.get('/productos/precio/:id', (req,res) =>{
+app.get('/existencias/precio/:id', async (req,res) =>{
 	try{
-		let productID = parseInt(req.params.id)
-		let productToGetPrice = datos.productos.find((product) => product.id === productID)
-		if(productToGetPrice){
-			res.status(200).json({'Product price' : productToGetPrice.precio})
+		let existenciaID = parseInt(req.params.id)
+		let existenciaToGetPrice = await Existencia.findByPk(existenciaID)
+		if(existenciaToGetPrice){
+			res.status(200).json({'Existence price' : existenciaToGetPrice.precio}) // los precios los tengo en las existencias, el producto no posee precio hasta crear una existencia (existencia = producto + proveedor)
 		}else{
-			res.status(204).json({'message' : 'Product not found'})
+			res.status(204).json({'message' : 'Existence not found'})
 		}
 	}catch(error){
 	
@@ -130,15 +136,15 @@ app.get('/productos/precio/:id', (req,res) =>{
 })
 
 /* 7- Crear el endpoint que permita obtener el nombre de un producto que se indica por id. */
-app.get('/productos/nombre/:id', (req,res) =>{
+app.get('/productos/nombre/:id', async (req,res) =>{
 	try{
 		let productID = parseInt(req.params.id)
-		let productToGetName = datos.productos.find((product) => product.id === productID)
+		let productToGetName = await Producto.findByPk(productID)
 		if(productToGetName){
-			res.status(200).json({'Product name' : productToGetName.nombre})
+			res.status(200).json({'Product name' : productToGetName.nombre_producto})
 		}
 		else{
-			res.status(204).json({'message' : 'user not found'})
+			res.status(204).json({'message' : 'product not found'})
 		}
 	}catch(error){
 	
@@ -148,15 +154,15 @@ app.get('/productos/nombre/:id', (req,res) =>{
 })
 
 /* 8- Crear el endpoint que permita obtener el teléfono de un usuario que se indica por id. */
-app.get('/usuarios/telefono/:id', (req,res) =>{
+app.get('/clientes/telefono/:id', async (req,res) =>{
 	try{
-		let userID = parseInt(req.params.id)
-		let userToGetTel = datos.usuarios.find((user) => user.id === userID)
-		if(userToGetTel){
-			res.status(200).json({'User number' :userToGetTel.telefono})
+		let clientID = parseInt(req.params.id)
+		let clientToGetTel = await Cliente.findByPk(clientID)
+		if(clientToGetTel){
+			res.status(200).json({'Client number' :clientToGetTel.telefono_cliente})
 		}
 		else{
-			res.status(204).json({'message' : 'user not found'})
+			res.status(204).json({'message' : 'Client not found'})
 		}
 	} catch(error){
 	
@@ -166,12 +172,12 @@ app.get('/usuarios/telefono/:id', (req,res) =>{
 })
 
 /* 9- Crear el endpoint que permita obtener el nombre de un usuario que se indica por id. */
-app.get('/usuarios/nombre/:id', (req,res) =>{
+app.get('/clientes/nombre/:id', async(req,res) =>{
 	try{
-		let userID = parseInt(req.params.id)
-		let userToGetName = datos.usuarios.find((user) => user.id === userID)
-		if(userToGetName){
-			res.status(200).json({'User name' : userToGetName.nombre})
+		let clientID = parseInt(req.params.id)
+		let clientToGetName = await Cliente.findByPk(clientID)
+		if(clientToGetName){
+			res.status(200).json({'User name' : clientToGetName.nombre_cliente})
 		}
 		else{
 			res.status(204).json({'message' : 'user not found'})
@@ -186,12 +192,14 @@ app.get('/usuarios/nombre/:id', (req,res) =>{
 
 /* 10- Crear el endpoint que permita obtener el total del stock actual de productos, la sumatoria de los
 precios individuales. */
-app.get('/productos/totalstock', (req,res) => {
+app.get('/existencias/totalstock', async (req,res) => {
 	try {
 		// Sumar los precios individuales de todos los productos
-		const totalStock = datos.productos.reduce((total, product) => {
-			return total + product.precio
-		}, 0)
+		const existencias = await Existencia.findAll()
+		const totalStock = existencias.reduce((total,existencias)=> {
+			const precio = parseFloat(existencias.precio)
+			return total + precio
+		},0)
 	
 		res.status(200).json({ 'Total Stock Price': totalStock })
 	}
@@ -206,6 +214,12 @@ app.use('', (req, res) => {
 	res.status(404).send('<h1>ERROR 404 </h1>')
 })
 
+try {
+	await DB.authenticate() //es asincrono y lanza una consulta random para probar la conexión
+	console.log('database connected successfully')
+} catch (error) {
+	console.log('database conection error')
+}
 
 app.listen(expossedPort, () => {
 	console.log('Servidor montado, escuchando en http://localhost:'+expossedPort)
